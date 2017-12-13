@@ -148,23 +148,33 @@ def get_logger(append_newline=False):
     """
 
     try:
-        host = os.environ['LOGSTASH_SERVER']
-        port = int(os.environ['LOGSTASH_PORT'])
-        socket_type = os.environ['LOGSTASH_PROTO']
+        filename = os.environ['LOGSTASH_FILENAME']
+        log_in_file = True
     except KeyError:
-        sys.exit("LOGSTASH_SERVER, LOGSTASH_PORT and LOGSTASH_PROTO are "
-                 "required.")
-
-    logstash_handler = None
-    if socket_type == 'udp':
-        logstash_handler = logstash.UDPLogstashHandler
-    elif socket_type == 'tcp':
-        logstash_handler = logstash.TCPLogstashHandler
-    else:
-        raise RuntimeError('Unknown protocol defined: %r' % socket_type)
+        try:
+            host = os.environ['LOGSTASH_SERVER']
+            port = int(os.environ['LOGSTASH_PORT'])
+            socket_type = os.environ['LOGSTASH_PROTO']
+            log_in_file = False
+        except KeyError:
+            sys.exit("LOGSTASH_FILENAME or LOGSTASH_SERVER, LOGSTASH_PORT and LOGSTASH_PROTO are "
+                     "required.")
 
     logger = logging.getLogger('supervisor')
-    handler = logstash_handler(host, port, version=1)
+
+    if log_in_file:
+        logstash_handler = logstash.FileLogstashHandler
+        handler = logstash_handler(filename, version=1)
+    else:
+        if socket_type == 'udp':
+            logstash_handler = logstash.UDPLogstashHandler
+        elif socket_type == 'tcp':
+            logstash_handler = logstash.TCPLogstashHandler
+        else:
+            raise RuntimeError('Unknown protocol defined: %r' % socket_type)
+
+        handler = logstash_handler(host, port, version=1)
+
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
